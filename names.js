@@ -118,3 +118,28 @@ export function smartName(rawName, username, pk) {
 export function cleanUsername(u) {
     return u.replace(/^@+/, '').replace(/\s/g, '').trim().toLowerCase();
 }
+export function parseCookieSafe(raw) {
+    const cookies = {};
+
+    if (!raw || typeof raw !== 'string') {
+        return cookies;
+    }
+
+    raw.split(';').forEach(part => {
+        const eq = part.indexOf('=');
+        if (eq === -1) return;
+
+        const key = part.slice(0, eq).trim();
+        const value = part.slice(eq + 1).trim();
+
+        if (!key) return;
+
+        try {
+            cookies[key] = decodeURIComponent(value);
+        } catch {
+            cookies[key] = value;
+        }
+    });
+
+    return cookies;
+}
