@@ -6,7 +6,8 @@ import { MAPPINGS_FILE } from './config.js';
 export const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{FE00}-\u{FE0F}\u{2300}-\u{23FF}\u{25A0}-\u{25FF}\u{2100}-\u{214F}\u{27C0}-\u{27EF}\u{2980}-\u{29FF}\u{2B00}-\u{2BFF}\u{200D}\u{200E}\u{200F}\u{2060}\u{2061}-\u{2064}\u{1F0A0}-\u{1F0FF}]+/gu;
 
 // ---- CUSTOM MAPPING FILE (mappings.txt) ----
-// Format: username|Custom Name  (ek line me ek)
+// Format: keyword|Naam
+// Username me keyword dikhe (contain ho) to YAHI naam lagega
 const NAME_MAP = new Map();
 
 export function loadMappings(filepath = MAPPINGS_FILE) {
@@ -21,7 +22,7 @@ export function loadMappings(filepath = MAPPINGS_FILE) {
             }
         }
         if (NAME_MAP.size > 0) {
-            console.log(`✅ ${NAME_MAP.size} custom naam loaded (${filepath})`);
+            console.log(`✅ ${NAME_MAP.size} keyword-name mappings loaded (${filepath})`);
         }
     } catch {
         console.log(`ℹ️  ${filepath} nahi mili — sab automatic smartName se banega`);
@@ -29,8 +30,20 @@ export function loadMappings(filepath = MAPPINGS_FILE) {
 }
 
 export function getMappedName(username) {
-    if (!username) return null;
-    return NAME_MAP.get(String(username).toLowerCase()) || null;
+    if (!username || NAME_MAP.size === 0) return null;
+    const u = String(username).toLowerCase();
+
+    // Sabse LAMBE keyword pehle check (rahulsharma24 ko "rahul sharma" mile,
+    // sirf "rahul" se pehle) — isliye lambi keys priority
+    let bestMatch = null;
+    let bestLen = 0;
+    for (const [keyword, name] of NAME_MAP) {
+        if (u.includes(keyword) && keyword.length > bestLen) {
+            bestMatch = name;
+            bestLen = keyword.length;
+        }
+    }
+    return bestMatch; // match nahi mila to null
 }
 
 // ---- SMART NAME ----
