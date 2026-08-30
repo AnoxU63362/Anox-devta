@@ -1,40 +1,85 @@
-// transliterate.js
-export const HALANT = '\u094D';
+// ============ HINDI (DEVANAGARI) -> ENGLISH TRANSLITERATION ============
+
+export const HALANT = '\u094D'; // ्
+
+// Matras + modifiers (lowercase output)
+const MATRA_CHARS = '\u093E\u093F\u0940\u0941\u0942\u0943\u0947\u0948\u094B\u094C\u0901\u0902\u0903';
 
 export const DEVANAGARI_MAP = new Map([
-    // Vowels
+    // Independent vowels
     ['\u0905', 'A'], ['\u0906', 'Aa'], ['\u0907', 'I'], ['\u0908', 'Ee'],
     ['\u0909', 'U'], ['\u090A', 'Oo'], ['\u090B', 'Ri'], ['\u090F', 'E'],
     ['\u0910', 'Ai'], ['\u0913', 'O'], ['\u0914', 'Au'],
 
     // Consonants
-    ['\u0915', 'K'], ['\u0916', 'Kh'], ['\u0917', 'G'], ['\u0918', 'Gh'],
-    ['\u0919', 'Ng'], ['\u091A', 'Ch'], ['\u091B', 'Chh'], ['\u091C', 'J'],
-    ['\u091D', 'Jh'], ['\u091E', 'Ny'],
-    ['\u091F', 'T'], ['\u0920', 'Th'], ['\u0921', 'D'], ['\u0922', 'Dh'],
-    ['\u0923', 'N'],
-    ['\u0924', 'T'], ['\u0925', 'Th'], ['\u0926', 'D'], ['\u0927', 'Dh'],
-    ['\u0928', 'N'],
-    ['\u092A', 'P'], ['\u092B', 'Ph'], ['\u092C', 'B'], ['\u092D', 'Bh'],
-    ['\u092E', 'M'],
+    ['\u0915', 'K'], ['\u0916', 'Kh'], ['\u0917', 'G'], ['\u0918', 'Gh'], ['\u0919', 'Ng'],
+    ['\u091A', 'Ch'], ['\u091B', 'Chh'], ['\u091C', 'J'], ['\u091D', 'Jh'], ['\u091E', 'Ny'],
+    ['\u091F', 'T'], ['\u0920', 'Th'], ['\u0921', 'D'], ['\u0922', 'Dh'], ['\u0923', 'N'],
+    ['\u0924', 'T'], ['\u0925', 'Th'], ['\u0926', 'D'], ['\u0927', 'Dh'], ['\u0928', 'N'],
+    ['\u092A', 'P'], ['\u092B', 'F'], ['\u092C', 'B'], ['\u092D', 'Bh'], ['\u092E', 'M'],
     ['\u092F', 'Y'], ['\u0930', 'R'], ['\u0932', 'L'], ['\u0935', 'V'],
     ['\u0936', 'Sh'], ['\u0937', 'Sh'], ['\u0938', 'S'], ['\u0939', 'H'],
 
-    // Nukta
+    // Nukta (dot-modified) consonants
     ['\u0958', 'Q'], ['\u0959', 'Kh'], ['\u095A', 'G'], ['\u095B', 'Z'],
-    ['\u095C', 'R'], ['\u095D', 'Rh'], ['\u095E', 'F'], ['\u095F', 'Y'],
+    ['\u095C', 'D'], ['\u095D', 'Dh'], ['\u095E', 'F'], ['\u095F', 'Y'],
 
-    // Matras
-    ['\u093E', 'a'], ['\u093F', 'i'], ['\u0940', 'ee'],
-    ['\u0941', 'u'], ['\u0942', 'oo'], ['\u0943', 'ri'],
-    ['\u0947', 'e'], ['\u0948', 'ai'], ['\u094B', 'o'], ['\u094C', 'au'],
+    // Matras (vowel signs)
+    ['\u093E', 'a'], ['\u093F', 'i'], ['\u0940', 'ee'], ['\u0941', 'u'],
+    ['\u0942', 'oo'], ['\u0943', 'ri'], ['\u0947', 'e'], ['\u0948', 'ai'],
+    ['\u094B', 'o'], ['\u094C', 'au'],
 
-    // Modifiers
+    // Anusvara, Visarga, Chandrabindu
     ['\u0902', 'n'], ['\u0903', 'h'], ['\u0901', 'n'],
 
-    // Virama
-    ['\u094D', ''],
+    // Digits
+    ['\u0966', '0'], ['\u0967', '1'], ['\u0968', '2'], ['\u0969', '3'], ['\u096A', '4'],
+    ['\u096B', '5'], ['\u096C', '6'], ['\u096D', '7'], ['\u096E', '8'], ['\u096F', '9'],
+]);
 
+export function devanagariToLatin(text) {
+    if (!/[\u0900-\u097F]/.test(text)) return text;
+
+    let result = '';
+    let i = 0;
+
+    while (i < text.length) {
+        const c = text[i];
+
+        if (c === HALANT) { i++; continue; } // halant khud output nahi hota
+
+        if (DEVANAGARI_MAP.has(c)) {
+            const mapped = DEVANAGARI_MAP.get(c);
+            if (MATRA_CHARS.includes(c)) {
+                result += mapped; // matras already lowercase
+            } else if (i > 0 && text[i - 1] === HALANT) {
+                result += mapped.toLowerCase(); // conjunct ka doosra hissa lowercase
+            } else {
+                result += mapped;
+            }
+            i++;
+        } else {
+            result += c; // non-Devanagari pass through
+            i++;
+        }
+    }
+    return result;
+}
+
+export function transliterateName(text) {
+    if (!text || !/[\u0900-\u097F]/.test(text)) return text;
+    let latin = devanagariToLatin(text);
+
+    // Cleanup artifacts
+    latin = latin.replace(/([AEIOU])\1+/g, '$1');
+    latin = latin.replace(/([aeioo])\1+/g, '$1');
+    latin = latin.replace(/Kshh/g, 'Ksh');
+    latin = latin.replace(/Shh/g, 'Sh');
+    latin = latin.replace(/Chhh/g, 'Chh');
+    latin = latin.replace(/\s+/g, ' ').trim();
+
+    return latin;
+}
     // Digits
     ['\u0966', '0'], ['\u0967', '1'], ['\u0968', '2'], ['\u0969', '3'],
     ['\u096A', '4'], ['\u096B', '5'], ['\u096C', '6'], ['\u096D', '7'],
