@@ -1,10 +1,10 @@
 // ============ CONSTANTS ============
 
-export const WORKERS_PER_SESSION = 2;   // Workers per cookie session
-export const PER_TARGET = 5000;         // Max followers per user (jitna mile utna)
+export const WORKERS_PER_SESSION = 4;   // Workers per cookie session
+export const PER_TARGET = 10000;         // Max followers per user (jitna mile utna)
 export const PER_PAGE = 75;             // Items per API call
 export const BATCH_FLUSH = 1000;        // Disk write every N lines
-export const MAX_RUNTIME_MIN = 800;     // Safety cutoff
+export const MAX_RUNTIME_MIN = 500;     // Safety cutoff
 export const MAPPINGS_FILE = 'mappings.txt';
 
 // Legacy GraphQL hashes (fallback)
