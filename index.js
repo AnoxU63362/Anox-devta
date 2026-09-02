@@ -9,7 +9,7 @@ async function main() {
     console.log(`
 ======================================================
    INSTAGRAM CHAIN SCRAPER v11 — MULTI-SESSION
-   Followers-only · 5000/user · Duplicate-safe
+   Followers-only · 10000/user · Duplicate-safe
    Hindi→English · mappings.txt support
 ======================================================
     `);
@@ -70,7 +70,7 @@ async function main() {
 
     // 🚀 GO
     console.log(`\n🚀 Launching ${validSessions.length} × ${WORKERS_PER_SESSION} = ${validSessions.length * WORKERS_PER_SESSION} workers...`);
-    console.log(`🎯 FOLLOWERS (${5000} max/user — jitna mile utna) | Duplicates auto-skip`);
+    console.log(`🎯 FOLLOWERS (${10000} max/user — jitna mile utna) | Duplicates auto-skip`);
     await runChain(validSessions, cleanUsername(target), fp);
 }
 
