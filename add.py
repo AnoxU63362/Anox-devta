@@ -43,7 +43,7 @@ for i in range(1, count + 1):
 # Empty lines hata kar output banana
 all_data = [line for line in all_data if line.strip()]
 
-output_file = "merged.txt"
+output_file = "/sdcard/merged.txt"
 
 with open(output_file, "w", encoding="utf-8") as f:
     f.write("\n".join(all_data))
