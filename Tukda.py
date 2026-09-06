@@ -4,6 +4,7 @@
 import os
 import re
 import random
+import unicodedata
 
 
 # ==========================================
@@ -20,85 +21,29 @@ OUTPUT_DIR = "/sdcard/folder-d"
 def transliterate_hindi(text):
 
     mapping = {
-        # Combined letters
         "क्ष": "ksh",
         "त्र": "tr",
         "ज्ञ": "gy",
 
-        # Vowels
-        "अ": "a",
-        "आ": "aa",
-        "इ": "i",
-        "ई": "ee",
-        "उ": "u",
-        "ऊ": "oo",
-        "ए": "e",
-        "ऐ": "ai",
-        "ओ": "o",
-        "औ": "au",
+        "अ": "a", "आ": "aa", "इ": "i", "ई": "ee",
+        "उ": "u", "ऊ": "oo", "ए": "e", "ऐ": "ai",
+        "ओ": "o", "औ": "au",
 
-        # Consonants
-        "क": "k",
-        "ख": "kh",
-        "ग": "g",
-        "घ": "gh",
-        "ङ": "n",
+        "क": "k", "ख": "kh", "ग": "g", "घ": "gh", "ङ": "n",
+        "च": "ch", "छ": "chh", "ज": "j", "झ": "jh", "ञ": "n",
+        "ट": "t", "ठ": "th", "ड": "d", "ढ": "dh", "ण": "n",
+        "त": "t", "थ": "th", "द": "d", "ध": "dh", "न": "n",
+        "प": "p", "फ": "ph", "ब": "b", "भ": "bh", "म": "m",
+        "य": "y", "र": "r", "ल": "l", "व": "v",
+        "श": "sh", "ष": "sh", "स": "s", "ह": "h",
 
-        "च": "ch",
-        "छ": "chh",
-        "ज": "j",
-        "झ": "jh",
-        "ञ": "n",
+        "ा": "aa", "ि": "i", "ी": "ee", "ु": "u", "ू": "oo",
+        "ृ": "ri", "े": "e", "ै": "ai", "ो": "o", "ौ": "au",
 
-        "ट": "t",
-        "ठ": "th",
-        "ड": "d",
-        "ढ": "dh",
-        "ण": "n",
-
-        "त": "t",
-        "थ": "th",
-        "द": "d",
-        "ध": "dh",
-        "न": "n",
-
-        "प": "p",
-        "फ": "ph",
-        "ब": "b",
-        "भ": "bh",
-        "म": "m",
-
-        "य": "y",
-        "र": "r",
-        "ल": "l",
-        "व": "v",
-
-        "श": "sh",
-        "ष": "sh",
-        "स": "s",
-        "ह": "h",
-
-        # Matras
-        "ा": "aa",
-        "ि": "i",
-        "ी": "ee",
-        "ु": "u",
-        "ू": "oo",
-        "ृ": "ri",
-        "े": "e",
-        "ै": "ai",
-        "ो": "o",
-        "ौ": "au",
-
-        # Other marks
-        "ं": "n",
-        "ः": "h",
-        "ँ": "n",
-        "्": "",
-        "़": ""
+        "ं": "n", "ः": "h", "ँ": "n",
+        "्": "", "़": ""
     }
 
-    # Long combinations first
     for old, new in sorted(
         mapping.items(),
         key=lambda x: len(x[0]),
@@ -106,31 +51,77 @@ def transliterate_hindi(text):
     ):
         text = text.replace(old, new)
 
-    # Remove remaining Devanagari characters
-    text = re.sub(
-        r"[\u0900-\u097F]",
-        "",
-        text
+    text = re.sub(r"[\u0900-\u097F]", "", text)
+
+    return text
+
+
+# ==========================================
+# REMOVE ACCENTS / SPECIAL UNICODE MARKS
+# ==========================================
+
+def normalize_unicode(text):
+
+    text = unicodedata.normalize("NFKD", text)
+
+    # Combining marks remove
+    text = "".join(
+        char for char in text
+        if not unicodedata.combining(char)
     )
 
     return text
 
 
 # ==========================================
-# CLEAN + FORMAT NAME
+# EXTRACT NORMAL NAME WORDS
 # ==========================================
 
-def clean_name(name):
+def extract_name_words(name):
 
-    name = name.strip()
-
-    # Underscore -> space
-    name = name.replace("_", " ")
-
-    # Hindi -> Roman English
+    # Hindi first
     name = transliterate_hindi(name)
 
-    # Remove unwanted repeated spaces
+    # Unicode normalize
+    name = normalize_unicode(name)
+
+    # Convert fancy letters where possible
+    try:
+        name = name.encode(
+            "ascii",
+            "ignore"
+        ).decode("ascii")
+    except:
+        pass
+
+    # Remove quotes
+    name = re.sub(
+        r"""["'`“”‘’]""",
+        " ",
+        name
+    )
+
+    # Everything except English letters becomes space
+    # This removes:
+    # emojis
+    # flags
+    # stars
+    # brackets
+    # decorative symbols
+    # numbers
+    # underscores
+    # dots
+    # hyphens
+    name = re.sub(
+        r"[^A-Za-z]+",
+        " ",
+        name
+    )
+
+    # Lowercase
+    name = name.lower()
+
+    # Remove repeated spaces
     name = re.sub(
         r"\s+",
         " ",
@@ -138,26 +129,191 @@ def clean_name(name):
     ).strip()
 
     if not name:
-        return ""
+        return []
 
-    # Split into words
     words = name.split()
 
+    return words
+
+
+# ==========================================
+# USERNAME -> POSSIBLE NAME
+# ==========================================
+
+def username_name_words(username):
+
+    # IMPORTANT:
+    # Username itself is NEVER changed in output.
+    # This function only reads it to recover a name.
+
+    temp = username
+
+    # Lowercase only for analysis
+    temp = temp.lower()
+
+    # Remove numbers
+    temp = re.sub(
+        r"\d+",
+        " ",
+        temp
+    )
+
+    # Separators -> spaces
+    temp = re.sub(
+        r"[_\-.]+",
+        " ",
+        temp
+    )
+
+    # Anything else -> space
+    temp = re.sub(
+        r"[^a-z]+",
+        " ",
+        temp
+    )
+
+    temp = re.sub(
+        r"\s+",
+        " ",
+        temp
+    ).strip()
+
+    if not temp:
+        return []
+
+    words = temp.split()
+
+    # Common prefixes that are usually not the person's name
+    prefixes = {
+        "mr",
+        "mrs",
+        "ms",
+        "miss",
+        "mrsh",
+        "dr",
+        "official",
+        "real",
+        "its",
+        "im",
+        "iam",
+        "the",
+        "user",
+        "admin"
+    }
+
+    # Remove prefix only when there is another word
+    while len(words) > 1 and words[0] in prefixes:
+        words.pop(0)
+
+    # Remove obvious generic suffixes
+    suffixes = {
+        "official",
+        "real",
+        "insta",
+        "instagram",
+        "fb",
+        "facebook",
+        "yt",
+        "youtube"
+    }
+
+    while len(words) > 1 and words[-1] in suffixes:
+        words.pop()
+
+    return words
+
+
+# ==========================================
+# DECIDE FINAL NAME
+# ==========================================
+
+def clean_name(username, name):
+
+    original_words = extract_name_words(name)
+
+    username_words = username_name_words(username)
+
     # --------------------------------------
-    # ONLY ONE WORD
-    # Rakesh -> Rakesh Rakesh
-    # Rajesh -> Rajesh Rajesh
+    # CASE 1:
+    # Name contains usable words
+    # --------------------------------------
+
+    if original_words:
+
+        # If name has 2 or more words,
+        # keep first 2 meaningful words.
+        #
+        # Example:
+        # "ankit Saini" -> ankit saini
+        #
+        # Decorative words are already removed.
+
+        if len(original_words) >= 2:
+
+            words = original_words[:2]
+
+        else:
+
+            words = original_words[:1]
+
+        # ----------------------------------
+        # If name is only ONE word:
+        #
+        # Prefer username name when it gives
+        # a clear matching first name.
+        # ----------------------------------
+
+        if len(words) == 1 and username_words:
+
+            first_name = username_words[0]
+
+            # If the name from actual name looks
+            # like the username's first part,
+            # use it.
+            if len(first_name) >= 2:
+
+                # Keep the actual cleaned name.
+                pass
+
+    else:
+
+        # ----------------------------------
+        # CASE 2:
+        # Name is only emoji/symbols/etc.
+        #
+        # Recover name from username.
+        # ----------------------------------
+
+        words = username_words[:2]
+
+    # --------------------------------------
+    # NO NAME FOUND
+    # --------------------------------------
+
+    if not words:
+
+        return ""
+
+    # --------------------------------------
+    # If first usable name word is only 1:
+    # duplicate it.
+    #
+    # raj -> raj raj
+    # sachin -> sachin sachin
     # --------------------------------------
 
     if len(words) == 1:
+
         words.append(words[0])
 
-    # Capitalize each name word
+    # --------------------------------------
+    # Capitalization
+    # --------------------------------------
+
     words = [
-        word[0].upper() + word[1:]
-        if word
-        else word
+        word[0].lower() + word[1:].lower()
         for word in words
+        if word
     ]
 
     return " ".join(words)
@@ -182,31 +338,34 @@ def clean_file(input_file):
 
             for line in f:
 
-                line = line.strip()
+                line = line.rstrip("\r\n")
 
-                # Empty line
-                if not line:
+                if not line.strip():
                     continue
 
-                # Header skip
-                if line.lower() == "username|name":
+                # Header
+                if line.strip().lower() == "username|name":
                     continue
 
-                # Split at first |
+                # Split ONLY at first |
                 parts = line.split("|", 1)
 
                 if len(parts) != 2:
                     continue
 
+                # ----------------------------------
+                # USERNAME EXACTLY AS IT IS
+                # ----------------------------------
+
                 username = parts[0].strip()
+
                 name = parts[1].strip()
 
-                # Username empty
                 if not username:
                     continue
 
                 # ----------------------------------
-                # DUPLICATE USERNAME REMOVE
+                # DUPLICATE USERNAME
                 # ----------------------------------
 
                 username_key = username.lower()
@@ -217,17 +376,24 @@ def clean_file(input_file):
                 seen.add(username_key)
 
                 # ----------------------------------
-                # NAME CLEAN
+                # CLEAN NAME
                 # ----------------------------------
 
-                name = clean_name(name)
+                cleaned_name = clean_name(
+                    username,
+                    name
+                )
 
-                # Agar name empty ho gaya
-                if not name:
+                # Name empty
+                if not cleaned_name:
                     continue
 
+                # ----------------------------------
+                # USERNAME IS WRITTEN EXACTLY SAME
+                # ----------------------------------
+
                 rows.append(
-                    f"{username}|{name}"
+                    f"{username}|{cleaned_name}"
                 )
 
     except UnicodeDecodeError:
@@ -279,21 +445,19 @@ def delete_old_files():
 
 def split_files(rows, number_of_files):
 
-    # Create output folder
     os.makedirs(
         OUTPUT_DIR,
         exist_ok=True
     )
 
-    # Delete old generated files
     delete_old_files()
 
-    # Randomize rows
+    # Randomize
     random.shuffle(rows)
 
     total = len(rows)
 
-    # Unique numbers from 1-100
+    # Unique numbers 1-100
     random_numbers = random.sample(
         range(1, 101),
         number_of_files
@@ -338,6 +502,7 @@ def split_files(rows, number_of_files):
                 )
 
                 for row in chunk:
+
                     f.write(
                         row + "\n"
                     )
@@ -383,19 +548,18 @@ def main():
     print()
     print("=" * 40)
     print(" USERNAME + NAME CLEANER")
-    print(" DUPLICATE + HINDI + SPLITTER")
+    print(" EMOJI + SYMBOL + DUPLICATE CLEANER")
     print("=" * 40)
     print()
 
     # --------------------------------------
-    # INPUT FILE PATH
+    # INPUT FILE
     # --------------------------------------
 
     input_file = input(
         "Input file path do: "
     ).strip()
 
-    # Remove accidental quotes
     input_file = input_file.strip(
         "\"'"
     )
@@ -403,28 +567,19 @@ def main():
     if not os.path.isfile(input_file):
 
         print()
-        print(
-            "File nahi mili:"
-        )
-        print(
-            input_file
-        )
+        print("File nahi mili:")
+        print(input_file)
         return
 
     print()
-    print(
-        "Input:",
-        input_file
-    )
+    print("Input:", input_file)
 
     # --------------------------------------
-    # CLEAN DATA
+    # CLEAN
     # --------------------------------------
 
     print()
-    print(
-        "Data clean ho raha hai..."
-    )
+    print("Data clean ho raha hai...")
 
     rows = clean_file(
         input_file
@@ -433,9 +588,7 @@ def main():
     if not rows:
 
         print()
-        print(
-            "Koi valid data nahi mila."
-        )
+        print("Koi valid data nahi mila.")
         return
 
     print()
@@ -445,7 +598,7 @@ def main():
     )
 
     # --------------------------------------
-    # ASK FILE COUNT
+    # FILE COUNT
     # --------------------------------------
 
     while True:
@@ -493,9 +646,7 @@ def main():
     # --------------------------------------
 
     print()
-    print(
-        "Files ban rahi hain..."
-    )
+    print("Files ban rahi hain...")
     print()
 
     split_files(
