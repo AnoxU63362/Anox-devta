@@ -6,8 +6,8 @@ import * as readline from 'readline';
 // CONSTANTS
 // ============================================================
 
-const WORKERS_PER_SESSION = 2;
-const PER_TARGET = 800;
+const WORKERS_PER_SESSION = 4;
+const PER_TARGET = 10000;
 const PER_PAGE = 75;
 const BATCH_FLUSH = 1000;
 const MAX_RUNTIME_MIN = 800;
