@@ -1,153 +1,80 @@
-// ============ CHAIN ENGINE (DEDUPE + BUFFERED WRITE) ============
-import * as fs from 'fs';
-import { PER_TARGET, MAX_RUNTIME_MIN, WORKERS_PER_SESSION, BATCH_FLUSH } from './config.js';
-import { fetchFollowList, resolveUserId } from './instagram.js';
-import { cleanUsername, smartName, getMappedName } from './names.js';
-import { sleep, countLines } from './helpers.js';
+// ============ MAIN ============
+import { InstagramSession, verifyLogin, setFetchMethod } from './instagram.js';
+import { runChain } from './scraper.js';
+import { cleanUsername, loadMappings } from './names.js';
+import { parseCookie, ask } from './helpers.js';
+import { WORKERS_PER_SESSION } from './config.js';
 
-export class BufferedWriter {
-    constructor(filepath) {
-        this.filepath = filepath;
-        this.buffer = [];
-        this.totalWritten = 0;
-        fs.appendFileSync(filepath, '', 'utf-8');
+async function main() {
+    console.log(`
+════════════════════════════════════════════════
+   INSTAGRAM CHAIN SCRAPER v12
+   2 Methods: [4] APP-MOBILE · [5] HYBRID
+   Followers-only · Duplicate-safe · Hindi→English
+════════════════════════════════════════════════
+    `);
+
+    // 📋 MAPPINGS (optional)
+    loadMappings('mappings.txt');
+
+    // 🎯 METHOD
+    const m = (await ask('\n🎯 Method [4=APP-MOBILE / 5=HYBRID]: ')).trim();
+    if (!['4', '5'].includes(m)) {
+        console.log('❌ Sirf 4 ya 5 select karo');
+        process.exit(1);
     }
-    write(line) {
-        this.buffer.push(line);
-        this.totalWritten++;
-        if (this.buffer.length >= BATCH_FLUSH) this.flush();
-    }
-    flush() {
-        if (this.buffer.length > 0) {
-            fs.appendFileSync(this.filepath, this.buffer.join('\n') + '\n', 'utf-8');
-            this.buffer = [];
+    setFetchMethod(parseInt(m));
+    console.log(`✅ Method: ${m === '4' ? 'APP-MOBILE (i.instagram REST + GQL fallback)' : 'HYBRID (GQL → REST → Mobile — sab try)'}`);
+
+    // 🍪 COOKIES
+    console.log('\n🍪 Cookie string(s) — ek line me ek, ya comma-separated:');
+    const rawInput = await ask('> ');
+    const rawCookies = rawInput.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 50);
+
+    const cookieDicts = [];
+    for (const raw of rawCookies) {
+        const cd = parseCookie(raw);
+        if (cd.sessionid && cd.csrftoken) {
+            cookieDicts.push(cd);
+        } else {
+            console.log('⚠️  Invalid cookie skip');
         }
     }
+    if (cookieDicts.length === 0) {
+        console.log('❌ Koi valid cookie nahi. sessionid + csrftoken dono chahiye.');
+        process.exit(1);
+    }
+    console.log(`✅ ${cookieDicts.length} session(s) loaded`);
+
+    const sessions = cookieDicts.map((cd, i) => new InstagramSession(cd, i));
+
+    // ✔️ VERIFY
+    console.log('\n🔍 Verifying sessions…');
+    const valid = [];
+    for (const s of sessions) {
+        const [ok, username] = await verifyLogin(s);
+        if (ok) {
+            console.log(`   ✅ S${s.id}: @${username}`);
+            valid.push(s);
+        } else {
+            console.log(`   ❌ S${s.id}: ${username}`);
+        }
+    }
+    if (valid.length === 0) {
+        console.log('❌ Koi session valid nahi. FRESH cookie lo (logout → login → new cookie).');
+        process.exit(1);
+    }
+    console.log(`✅ ${valid.length}/${sessions.length} sessions verified`);
+
+    // 🎯 TARGET
+    const target = await ask('\n🎯 Target username (@ bhi chalega): ');
+    const fp = (await ask('📁 Output file [output.txt]: ')) || 'output.txt';
+
+    console.log(`\n🚀 ${valid.length} × ${WORKERS_PER_SESSION} = ${valid.length * WORKERS_PER_SESSION} workers…`);
+    await runChain(valid, cleanUsername(target), fp);
 }
 
-class SharedState {
-    constructor() {
-        this.queue = [];
-        this.processed = new Set();
-        this.visited = new Set();
-        this.saved = new Set();
-        this.lines = 0;
-        this.usersDone = 0;
-        this.totalFollowers = 0;
-        this.startTime = Date.now();
-    }
-    nextUser() {
-        for (let i = 0; i < this.queue.length; i++) {
-            const u = this.queue[i];
-            if (!this.processed.has(u) && !this.visited.has(u)) {
-                this.queue.splice(i, 1);
-                return u;
-            }
-        }
-        return null;
-    }
-    markDone(u) { this.processed.add(u); }
-    markVisited(u) { this.visited.add(u); }
-    enqueue(u) {
-        const c = cleanUsername(u);
-        if (c && !this.processed.has(c) && !this.visited.has(c)) {
-            this.queue.push(c);
-        }
-    }
-    getElapsedSec() { return (Date.now() - this.startTime) / 1000; }
-    getRate() {
-        const min = this.getElapsedSec() / 60;
-        return min > 0 ? Math.round(this.lines / min) : 0;
-    }
-}
-
-async function worker(session, state, writer, workerId) {
-    const sid = session.id;
-
-    while (state.getElapsedSec() < MAX_RUNTIME_MIN * 60) {
-        const username = state.nextUser();
-        if (!username) { await sleep(100); continue; }
-        if (state.processed.has(username) || state.visited.has(username)) continue;
-        state.markVisited(username);
-
-        console.log(`[S${sid}-W${workerId}] ▶ @${username} | 📄 ${state.lines} lines | ⚡ ${state.getRate()}/min`);
-
-        const uid = await resolveUserId(session, username);
-        if (!uid) {
-            console.log(`   ✗ ID fail — skip`);
-            state.markDone(username);
-            continue;
-        }
-        console.log(`   ✅ ID: ${uid}`);
-
-        const followers = await fetchFollowList(session, uid, username, 'followers', PER_TARGET);
-
-        let added = 0;
-        for (const [uname, fnameRaw, pk] of followers) {
-            if (!uname?.trim()) continue;
-            if (state.saved.has(uname)) continue;
-            state.saved.add(uname);
-
-            const mapped = getMappedName(uname);
-            const fname = mapped || smartName(fnameRaw, uname, pk);
-            writer.write(`${uname}|${fname}`);
-            state.lines++;
-
-            if (!state.processed.has(uname) && !state.visited.has(uname)) {
-                state.queue.push(uname);
-                added++;
-            }
-        }
-
-        state.usersDone++;
-        state.markDone(username);
-        console.log(`   ✓ ${followers.length} followers | ➕ ${added} new | 📋 Queue: ${state.queue.length}`);
-
-        await sleep(500 + Math.random() * 500);
-    }
-}
-
-export async function runChain(sessions, target, filepath) {
-    const state = new SharedState();
-    state.queue.push(cleanUsername(target));
-    state.startTime = Date.now();
-
-    try {
-        const old = fs.readFileSync(filepath, 'utf-8');
-        for (const line of old.split('\n')) {
-            const u = line.split('|')[0].trim();
-            if (u) state.saved.add(u);
-        }
-        console.log(`🔒 ${state.saved.size} purane usernames load — duplicates skip honge`);
-    } catch { /* new file */ }
-
-    const writer = new BufferedWriter(filepath);
-
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`🚀 CHAIN SCRAPER — 2 METHODS (M4 APP-MOBILE + M5 HYBRID)`);
-    console.log(`⚡ ${sessions.length} sessions × ${WORKERS_PER_SESSION} workers`);
-    console.log(`📄 ${filepath} | 🎯 ${PER_TARGET}/user max`);
-    console.log(`${'='.repeat(60)}\n`);
-
-    const allWorkers = [];
-    for (let si = 0; si < sessions.length; si++) {
-        for (let wi = 0; wi < WORKERS_PER_SESSION; wi++) {
-            allWorkers.push(worker(sessions[si], state, writer, wi + 1));
-        }
-    }
-
-    const monitor = setInterval(() => {
-        const percpu = state.usersDone > 0 ? (state.lines / state.usersDone).toFixed(0) : 0;
-        console.log(`\n📊 [${state.getElapsedSec().toFixed(0)}s] ${state.lines} lines · ${state.usersDone} users · ${state.getRate()}/min · ${state.queue.length} queued · ~${percpu}/user\n`);
-    }, 5000);
-
-    await Promise.all(allWorkers);
-    clearInterval(monitor);
-    writer.flush();
-
-    const linesFinal = countLines(filepath);
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`✅ DONE! ${linesFinal} lines | ${state.usersDone} users | ${state.getElapsedSec().toFixed(0)}s`);
-    console.log(`📁 ${filepath}`);
-    console.log(`${'='.repeat(60)}`);
-}
+main().catch(err => {
+    console.error('\n💥 Fatal:', err.message);
+    process.exit(1);
+});
