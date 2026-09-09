@@ -16,8 +16,7 @@ export function parseCookie(raw) {
 
 export function countLines(filepath) {
     try {
-        const data = fs.readFileSync(filepath, 'utf-8');
-        return data.split('\n').filter(l => l.trim()).length;
+        return fs.readFileSync(filepath, 'utf-8').split('\n').filter(l => l.trim()).length;
     } catch { return 0; }
 }
 
