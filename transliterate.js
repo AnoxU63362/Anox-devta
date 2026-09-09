@@ -1,82 +1,50 @@
-// ============ HINDI (DEVANAGARI) -> ENGLISH TRANSLITERATION ============
-
+// ============ HINDI → ENGLISH TRANSLITERATION ============
 export const HALANT = '\u094D';
 
-// Matras + modifiers
-const MATRA_CHARS =
-    '\u093E\u093F\u0940\u0941\u0942\u0943\u0947\u0948\u094B\u094C\u0901\u0902\u0903';
+const MATRA_CHARS = '\u093E\u093F\u0940\u0941\u0942\u0943\u0947\u0948\u094B\u094C\u0901\u0902\u0903';
 
 export const DEVANAGARI_MAP = new Map([
-    // Independent vowels
-    ['\u0905', 'A'], ['\u0906', 'Aa'], ['\u0907', 'I'], ['\u0908', 'Ee'],
-    ['\u0909', 'U'], ['\u090A', 'Oo'], ['\u090B', 'Ri'],
-    ['\u090F', 'E'], ['\u0910', 'Ai'], ['\u0913', 'O'], ['\u0914', 'Au'],
-
-    // Consonants
-    ['\u0915', 'K'], ['\u0916', 'Kh'], ['\u0917', 'G'], ['\u0918', 'Gh'],
-    ['\u0919', 'Ng'], ['\u091A', 'Ch'], ['\u091B', 'Chh'],
-    ['\u091C', 'J'], ['\u091D', 'Jh'], ['\u091E', 'Ny'],
-    ['\u091F', 'T'], ['\u0920', 'Th'], ['\u0921', 'D'], ['\u0922', 'Dh'],
-    ['\u0923', 'N'], ['\u0924', 'T'], ['\u0925', 'Th'],
-    ['\u0926', 'D'], ['\u0927', 'Dh'], ['\u0928', 'N'],
-    ['\u092A', 'P'], ['\u092B', 'F'], ['\u092C', 'B'], ['\u092D', 'Bh'],
-    ['\u092E', 'M'], ['\u092F', 'Y'], ['\u0930', 'R'], ['\u0932', 'L'],
-    ['\u0935', 'V'], ['\u0936', 'Sh'], ['\u0937', 'Sh'],
-    ['\u0938', 'S'], ['\u0939', 'H'],
-
-    // Nukta
-    ['\u0958', 'Q'], ['\u0959', 'Kh'], ['\u095A', 'G'],
-    ['\u095B', 'Z'], ['\u095C', 'D'], ['\u095D', 'Dh'],
-    ['\u095E', 'F'], ['\u095F', 'Y'],
-
-    // Matras
-    ['\u093E', 'a'], ['\u093F', 'i'], ['\u0940', 'ee'],
-    ['\u0941', 'u'], ['\u0942', 'oo'], ['\u0943', 'ri'],
-    ['\u0947', 'e'], ['\u0948', 'ai'], ['\u094B', 'o'], ['\u094C', 'au'],
-
-    // Modifiers
-    ['\u0902', 'n'], ['\u0903', 'h'], ['\u0901', 'n'],
-
-    // Digits
-    ['\u0966', '0'], ['\u0967', '1'], ['\u0968', '2'], ['\u0969', '3'],
-    ['\u096A', '4'], ['\u096B', '5'], ['\u096C', '6'], ['\u096D', '7'],
-    ['\u096E', '8'], ['\u096F', '9'],
-
-    // Common conjuncts
-    ['\u0915\u094D\u0937', 'Ksh'],
-    ['\u0924\u094D\u0930', 'Tr'],
-    ['\u091C\u094D\u091E', 'Gya'],
-    ['\u0936\u094D\u0930', 'Shr'],
-    ['\u0926\u094D\u092F', 'Dy'],
-    ['\u0926\u094D\u0935', 'Dv'],
-    ['\u0926\u094D\u0930', 'Dr'],
-    ['\u092A\u094D\u0930', 'Pr'],
-    ['\u092C\u094D\u0930', 'Br'],
-    ['\u0915\u094D\u0930', 'Kr'],
-    ['\u0917\u094D\u0930', 'Gr'],
-    ['\u092A\u094D\u0932', 'Pl'],
-    ['\u0938\u094D\u0935', 'Sv'],
-    ['\u0938\u094D\u092F', 'Sy'],
-    ['\u0928\u094D\u0926', 'Nd'],
-    ['\u0928\u094D\u0927', 'Ndh'],
-    ['\u092E\u094D\u092C', 'Mb'],
-    ['\u092E\u094D\u092A', 'Mp'],
-    ['\u0919\u094D\u0915', 'Nk'],
-    ['\u0919\u094D\u0917', 'Ng'],
+    ['\u0905','A'],['\u0906','Aa'],['\u0907','I'],['\u0908','Ee'],
+    ['\u0909','U'],['\u090A','Oo'],['\u090B','Ri'],
+    ['\u090F','E'],['\u0910','Ai'],['\u0913','O'],['\u0914','Au'],
+    ['\u0915','K'],['\u0916','Kh'],['\u0917','G'],['\u0918','Gh'],
+    ['\u0919','Ng'],['\u091A','Ch'],['\u091B','Chh'],
+    ['\u091C','J'],['\u091D','Jh'],['\u091E','Ny'],
+    ['\u091F','T'],['\u0920','Th'],['\u0921','D'],['\u0922','Dh'],
+    ['\u0923','N'],['\u0924','T'],['\u0925','Th'],
+    ['\u0926','D'],['\u0927','Dh'],['\u0928','N'],
+    ['\u092A','P'],['\u092B','F'],['\u092C','B'],['\u092D','Bh'],
+    ['\u092E','M'],['\u092F','Y'],['\u0930','R'],['\u0932','L'],
+    ['\u0935','V'],['\u0936','Sh'],['\u0937','Sh'],
+    ['\u0938','S'],['\u0939','H'],
+    ['\u0958','Q'],['\u0959','Kh'],['\u095A','G'],
+    ['\u095B','Z'],['\u095C','D'],['\u095D','Dh'],
+    ['\u095E','F'],['\u095F','Y'],
+    ['\u093E','a'],['\u093F','i'],['\u0940','ee'],
+    ['\u0941','u'],['\u0942','oo'],['\u0943','ri'],
+    ['\u0947','e'],['\u0948','ai'],['\u094B','o'],['\u094C','au'],
+    ['\u0902','n'],['\u0903','h'],['\u0901','n'],
+    ['\u0966','0'],['\u0967','1'],['\u0968','2'],['\u0969','3'],
+    ['\u096A','4'],['\u096B','5'],['\u096C','6'],['\u096D','7'],
+    ['\u096E','8'],['\u096F','9'],
+    ['\u0915\u094D\u0937','Ksh'],['\u0924\u094D\u0930','Tr'],
+    ['\u091C\u094D\u091E','Gya'],['\u0936\u094D\u0930','Shr'],
+    ['\u0926\u094D\u092F','Dy'],['\u0926\u094D\u0935','Dv'],
+    ['\u0926\u094D\u0930','Dr'],['\u092A\u094D\u0930','Pr'],
+    ['\u092C\u094D\u0930','Br'],['\u0915\u094D\u0930','Kr'],
+    ['\u0917\u094D\u0930','Gr'],['\u092A\u094D\u0932','Pl'],
+    ['\u0938\u094D\u0935','Sv'],['\u0938\u094D\u092F','Sy'],
+    ['\u0928\u094D\u0926','Nd'],['\u0928\u094D\u0927','Ndh'],
+    ['\u092E\u094D\u092C','Mb'],['\u092E\u094D\u092A','Mp'],
+    ['\u0919\u094D\u0915','Nk'],['\u0919\u094D\u0917','Ng'],
 ]);
 
 export function devanagariToLatin(text) {
-    if (!text || !/[\u0900-\u097F]/.test(text)) {
-        return text;
-    }
-
+    if (!text || !/[\u0900-\u097F]/.test(text)) return text;
     let result = '';
     let i = 0;
-
     while (i < text.length) {
         let matched = false;
-
-        // Conjuncts: longest match first
         for (const [dev, latin] of DEVANAGARI_MAP) {
             if (dev.length > 1 && text.startsWith(dev, i)) {
                 result += latin;
@@ -85,14 +53,10 @@ export function devanagariToLatin(text) {
                 break;
             }
         }
-
         if (matched) continue;
-
         const char = text[i];
-
         if (DEVANAGARI_MAP.has(char)) {
             const mapped = DEVANAGARI_MAP.get(char);
-
             if (MATRA_CHARS.includes(char)) {
                 result += mapped;
             } else if (i > 0 && text[i - 1] === HALANT) {
@@ -103,36 +67,22 @@ export function devanagariToLatin(text) {
         } else {
             result += char;
         }
-
         i++;
     }
-
     return result;
 }
 
 export function transliterateName(text) {
     if (!text) return '';
-
     let latin = devanagariToLatin(String(text));
-
-    // Normalize spaces
     latin = latin.replace(/\s+/g, ' ').trim();
-
-    // Cleanup
     latin = latin
         .replace(/Kshh/gi, 'Ksh')
         .replace(/Shh/gi, 'Sh')
         .replace(/Chhh/gi, 'Chh');
-
-    // Capitalize words
-    latin = latin
+    return latin
         .split(' ')
         .filter(Boolean)
-        .map(word =>
-            word.charAt(0).toUpperCase() +
-            word.slice(1).toLowerCase()
-        )
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
         .join(' ');
-
-    return latin;
 }
