@@ -51,7 +51,11 @@ def transliterate_hindi(text):
     ):
         text = text.replace(old, new)
 
-    text = re.sub(r"[\u0900-\u097F]", "", text)
+    text = re.sub(
+        r"[\u0900-\u097F]",
+        "",
+        text
+    )
 
     return text
 
@@ -62,11 +66,14 @@ def transliterate_hindi(text):
 
 def normalize_unicode(text):
 
-    text = unicodedata.normalize("NFKD", text)
+    text = unicodedata.normalize(
+        "NFKD",
+        text
+    )
 
-    # Combining marks remove
     text = "".join(
-        char for char in text
+        char
+        for char in text
         if not unicodedata.combining(char)
     )
 
@@ -91,7 +98,7 @@ def extract_name_words(name):
             "ascii",
             "ignore"
         ).decode("ascii")
-    except:
+    except Exception:
         pass
 
     # Remove quotes
@@ -102,7 +109,7 @@ def extract_name_words(name):
     )
 
     # Everything except English letters becomes space
-    # This removes:
+    # Removes:
     # emojis
     # flags
     # stars
@@ -131,9 +138,7 @@ def extract_name_words(name):
     if not name:
         return []
 
-    words = name.split()
-
-    return words
+    return name.split()
 
 
 # ==========================================
@@ -143,8 +148,8 @@ def extract_name_words(name):
 def username_name_words(username):
 
     # IMPORTANT:
-    # Username itself is NEVER changed in output.
-    # This function only reads it to recover a name.
+    # Username output me kabhi change nahi hoga.
+    # Ye function sirf username se naam recover karta hai.
 
     temp = username
 
@@ -172,6 +177,7 @@ def username_name_words(username):
         temp
     )
 
+    # Repeated spaces
     temp = re.sub(
         r"\s+",
         " ",
@@ -183,7 +189,7 @@ def username_name_words(username):
 
     words = temp.split()
 
-    # Common prefixes that are usually not the person's name
+    # Common prefixes
     prefixes = {
         "mr",
         "mrs",
@@ -201,11 +207,11 @@ def username_name_words(username):
         "admin"
     }
 
-    # Remove prefix only when there is another word
+    # Remove prefix only when another word exists
     while len(words) > 1 and words[0] in prefixes:
         words.pop(0)
 
-    # Remove obvious generic suffixes
+    # Common suffixes
     suffixes = {
         "official",
         "real",
@@ -240,48 +246,16 @@ def clean_name(username, name):
 
     if original_words:
 
-        # If name has 2 or more words,
-        # keep first 2 meaningful words.
-        #
-        # Example:
-        # "ankit Saini" -> ankit saini
-        #
-        # Decorative words are already removed.
-
-        if len(original_words) >= 2:
-
-            words = original_words[:2]
-
-        else:
-
-            words = original_words[:1]
-
-        # ----------------------------------
-        # If name is only ONE word:
-        #
-        # Prefer username name when it gives
-        # a clear matching first name.
-        # ----------------------------------
-
-        if len(words) == 1 and username_words:
-
-            first_name = username_words[0]
-
-            # If the name from actual name looks
-            # like the username's first part,
-            # use it.
-            if len(first_name) >= 2:
-
-                # Keep the actual cleaned name.
-                pass
+        # Keep maximum first 2 words
+        words = original_words[:2]
 
     else:
 
         # ----------------------------------
         # CASE 2:
-        # Name is only emoji/symbols/etc.
+        # Name only emoji/symbols/etc.
         #
-        # Recover name from username.
+        # Recover from username
         # ----------------------------------
 
         words = username_words[:2]
@@ -291,27 +265,25 @@ def clean_name(username, name):
     # --------------------------------------
 
     if not words:
-
         return ""
 
     # --------------------------------------
-    # If first usable name word is only 1:
-    # duplicate it.
+    # ONE WORD NAME
     #
+    # Example:
     # raj -> raj raj
     # sachin -> sachin sachin
     # --------------------------------------
 
     if len(words) == 1:
-
         words.append(words[0])
 
     # --------------------------------------
-    # Capitalization
+    # Lowercase
     # --------------------------------------
 
     words = [
-        word[0].lower() + word[1:].lower()
+        word.lower()
         for word in words
         if word
     ]
@@ -338,7 +310,9 @@ def clean_file(input_file):
 
             for line in f:
 
-                line = line.rstrip("\r\n")
+                line = line.rstrip(
+                    "\r\n"
+                )
 
                 if not line.strip():
                     continue
@@ -348,7 +322,10 @@ def clean_file(input_file):
                     continue
 
                 # Split ONLY at first |
-                parts = line.split("|", 1)
+                parts = line.split(
+                    "|",
+                    1
+                )
 
                 if len(parts) != 2:
                     continue
@@ -389,7 +366,7 @@ def clean_file(input_file):
                     continue
 
                 # ----------------------------------
-                # USERNAME IS WRITTEN EXACTLY SAME
+                # USERNAME SAME AS INPUT
                 # ----------------------------------
 
                 rows.append(
@@ -399,44 +376,76 @@ def clean_file(input_file):
     except UnicodeDecodeError:
 
         print()
-        print("ERROR: File UTF-8 format me nahi hai.")
-        print("File ko UTF-8 me save karke dobara try karo.")
+        print(
+            "ERROR: File UTF-8 format me nahi hai."
+        )
+        print(
+            "File ko UTF-8 me save karke dobara try karo."
+        )
+
         return []
 
     except Exception as e:
 
         print()
-        print("File read error:", e)
+        print(
+            "File read error:",
+            e
+        )
+
         return []
 
     return rows
 
 
 # ==========================================
-# DELETE OLD RANDOM FILES
+# FIND NEXT AVAILABLE IG NUMBER
 # ==========================================
 
-def delete_old_files():
+def get_next_file_number():
 
-    if not os.path.isdir(OUTPUT_DIR):
-        return
+    os.makedirs(
+        OUTPUT_DIR,
+        exist_ok=True
+    )
 
-    for filename in os.listdir(OUTPUT_DIR):
+    used_numbers = set()
 
-        if (
-            filename.startswith("random(")
-            and filename.endswith(").txt")
-        ):
+    # --------------------------------------
+    # Folder me existing Ig1.txt, Ig2.txt...
+    # check karo
+    # --------------------------------------
 
-            path = os.path.join(
-                OUTPUT_DIR,
-                filename
+    for filename in os.listdir(
+        OUTPUT_DIR
+    ):
+
+        match = re.fullmatch(
+            r"Ig(\d+)\.txt",
+            filename,
+            re.IGNORECASE
+        )
+
+        if match:
+
+            number = int(
+                match.group(1)
             )
 
-            try:
-                os.remove(path)
-            except:
-                pass
+            used_numbers.add(
+                number
+            )
+
+    # --------------------------------------
+    # Highest existing number + 1
+    # --------------------------------------
+
+    if not used_numbers:
+        return 1
+
+    return max(
+        used_numbers
+    ) + 1
 
 
 # ==========================================
@@ -450,26 +459,36 @@ def split_files(rows, number_of_files):
         exist_ok=True
     )
 
-    delete_old_files()
+    # --------------------------------------
+    # IMPORTANT:
+    #
+    # PURANI FILES KO DELETE NAHI KARNA
+    # PURANI FILES KO MODIFY NAHI KARNA
+    # --------------------------------------
 
-    # Randomize
     random.shuffle(rows)
 
     total = len(rows)
 
-    # Unique numbers 1-100
-    random_numbers = random.sample(
-        range(1, 101),
-        number_of_files
-    )
+    # --------------------------------------
+    # Existing Ig files ke baad se start
+    # --------------------------------------
 
+    next_number = get_next_file_number()
+
+    # --------------------------------------
     # Equal distribution
+    # --------------------------------------
+
     base = total // number_of_files
+
     extra = total % number_of_files
 
     start = 0
 
-    for i in range(number_of_files):
+    for i in range(
+        number_of_files
+    ):
 
         size = base
 
@@ -482,12 +501,40 @@ def split_files(rows, number_of_files):
 
         start += size
 
-        number = random_numbers[i]
+        # ----------------------------------
+        # Sequential filename
+        # ----------------------------------
+
+        number = next_number
 
         output_file = os.path.join(
             OUTPUT_DIR,
-            f"random({number}).txt"
+            f"Ig{number}.txt"
         )
+
+        # ----------------------------------
+        # Extra safety:
+        # Existing file ko overwrite
+        # nahi karna
+        # ----------------------------------
+
+        while os.path.exists(
+            output_file
+        ):
+
+            number += 1
+
+            output_file = os.path.join(
+                OUTPUT_DIR,
+                f"Ig{number}.txt"
+            )
+
+        # Next file number
+        next_number = number + 1
+
+        # ----------------------------------
+        # Write NEW file
+        # ----------------------------------
 
         try:
 
@@ -509,7 +556,7 @@ def split_files(rows, number_of_files):
 
             print(
                 f"[{i + 1}/{number_of_files}] "
-                f"random({number}).txt "
+                f"{os.path.basename(output_file)} "
                 f"-> {len(chunk)} lines"
             )
 
@@ -524,18 +571,22 @@ def split_files(rows, number_of_files):
     print("=" * 40)
     print("DONE")
     print("=" * 40)
+
     print(
         "Total unique usernames:",
         total
     )
+
     print(
-        "Total files:",
+        "Total new files:",
         number_of_files
     )
+
     print(
         "Output:",
         OUTPUT_DIR
     )
+
     print("=" * 40)
 
 
@@ -564,22 +615,34 @@ def main():
         "\"'"
     )
 
-    if not os.path.isfile(input_file):
+    if not os.path.isfile(
+        input_file
+    ):
 
         print()
-        print("File nahi mili:")
-        print(input_file)
+        print(
+            "File nahi mili:"
+        )
+        print(
+            input_file
+        )
+
         return
 
     print()
-    print("Input:", input_file)
+    print(
+        "Input:",
+        input_file
+    )
 
     # --------------------------------------
     # CLEAN
     # --------------------------------------
 
     print()
-    print("Data clean ho raha hai...")
+    print(
+        "Data clean ho raha hai..."
+    )
 
     rows = clean_file(
         input_file
@@ -588,7 +651,10 @@ def main():
     if not rows:
 
         print()
-        print("Koi valid data nahi mila.")
+        print(
+            "Koi valid data nahi mila."
+        )
+
         return
 
     print()
@@ -616,6 +682,7 @@ def main():
                 print(
                     "1 ya usse zyada number do."
                 )
+
                 continue
 
             if number_of_files > 100:
@@ -623,6 +690,7 @@ def main():
                 print(
                     "Maximum 100 files bana sakte ho."
                 )
+
                 continue
 
             if number_of_files > len(rows):
@@ -631,6 +699,7 @@ def main():
                     f"Sirf {len(rows)} "
                     "unique usernames hain."
                 )
+
                 continue
 
             break
@@ -646,7 +715,9 @@ def main():
     # --------------------------------------
 
     print()
-    print("Files ban rahi hain...")
+    print(
+        "Files ban rahi hain..."
+    )
     print()
 
     split_files(
@@ -660,4 +731,5 @@ def main():
 # ==========================================
 
 if __name__ == "__main__":
+
     main()
